@@ -42,7 +42,7 @@ class Battery:
         self.U_m = self.U_m_st * gain_U
         self.__eta = self.U_m * self.I_m / self.size / irradiance
 
-    def plot_IU(self, u_range: np.ndarray = np.linspace(0, 40, 81)) -> None:
+    def plot_IU(self, u_range: np.ndarray = np.linspace(0, 40, 81), label="Solar") -> None:
         """
         Please use "plt.show()" to view the figure.
         """
@@ -50,10 +50,10 @@ class Battery:
         c1 = (1 - self.I_m / self.I_sc) * np.exp(-self.U_m / c2 / self.U_oc)
         i = self.I_sc * (1 - c1 * (np.exp(u_range / c2 / self.U_oc) - 1))
         flt = i >= 0
-        plt.plot(u_range[flt], i[flt])
+        plt.plot(u_range[flt], i[flt], label=label)
         plt.scatter(self.U_m, self.I_m)
 
-    def plot_PU(self, u_range: np.ndarray = np.linspace(0, 40, 81)) -> None:
+    def plot_PU(self, u_range: np.ndarray = np.linspace(0, 40, 81), label="Solar") -> None:
         """
         Please use "plt.show()" to view the figure.
         """
@@ -62,7 +62,7 @@ class Battery:
         i = self.I_sc * (1 - c1 * (np.exp(u_range / c2 / self.U_oc) - 1))
         p = u_range * i
         flt = p >= 0
-        plt.plot(u_range[flt], p[flt])
+        plt.plot(u_range[flt], p[flt], label=label)
         plt.scatter(self.U_m, self.U_m * self.I_m)
 
 
@@ -137,21 +137,43 @@ if __name__ == '__main__':
     b = rp.battery
     # plot I-U character
     b.update_env(200, 25)
-    b.plot_IU()
+    b.plot_IU(u_range=np.linspace(0, 40, 401), label="Irradiance = 200 W/m²")
     b.update_env(600, 25)
-    b.plot_IU()
+    b.plot_IU(u_range=np.linspace(0, 40, 401), label="Irradiance = 600 W/m²")
     b.update_env(1000, 25)
-    b.plot_IU()
+    b.plot_IU(u_range=np.linspace(0, 40, 401), label="Irradiance = 1000 W/m²")
+    plt.title("I-U Curve of the PV Panel")
+    plt.xlabel("Voltage (V)")
+    plt.ylabel("Current (A)")
+    plt.legend()
+    plt.grid()
     plt.show()
     # plot P-U character
     b.update_env(200, 25)
-    b.plot_PU()
+    b.plot_PU(u_range=np.linspace(0, 40, 401), label="Irradiance = 200 W/m²")
     b.update_env(600, 25)
-    b.plot_PU()
+    b.plot_PU(u_range=np.linspace(0, 40, 401), label="Irradiance = 600 W/m²")
     b.update_env(1000, 25)
-    b.plot_PU()
+    b.plot_PU(u_range=np.linspace(0, 40, 401), label="Irradiance = 1000 W/m²")
+    plt.title("P-U Curve of the PV Panel")
+    plt.xlabel("Voltage (V)")
+    plt.ylabel("Power (W)")
+    plt.legend()
+    plt.grid()
     plt.show()
     # plot P-G character
-    g = np.linspace(0, 1000, 101)
-    plt.plot(g, rp.get_power(g, 0.1 * g, 30, 0, 20))
+    g = np.linspace(50, 300, 251)
+    plt.plot(g, rp.get_power(g, 100, 30, 0, 15))
+    plt.title("P-G Curve of the PV Panel")
+    plt.xlabel("Direct Normal Irradiation / DHI (W/m²)")
+    plt.ylabel("Power (W)")
+    plt.text(50,
+             5500,
+             "DHI: 100 W/m²\nAltitute: 30°\nTemperature: 15℃\nSun-tracking: No",
+             bbox=dict(
+                 boxstyle="round",
+                 ec=(0.8, 0.8, 0.8),
+                 fc=(1., 1., 1.),
+             ))
+    plt.grid()
     plt.show()
