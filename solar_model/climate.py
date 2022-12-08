@@ -4,19 +4,21 @@ from datetime import datetime
 import pandas as pd
 import matplotlib.pyplot as plt
 
-DATASET_PATH = Path("D:\\work\\YuCai\\projects\\data\\5031581_31.28_121.47_2020.csv")
-
 
 def climate_loader(dataset_path: Path) -> pd.DataFrame:
     data = pd.read_csv(dataset_path,
                        header=2,
                        parse_dates={"Datetime": ["Year", "Month", "Day", "Hour", "Minute"]},
                        date_parser=lambda x: datetime.strptime(x, "%Y %m %d %H %M"))
+    dt = data["Datetime"]
+    data["Day of Year"] = dt.dt.day_of_year
+    data["Hour Angle"] = (dt.dt.hour + dt.dt.minute / 60 - 12) * 15
     data.set_index("Datetime", inplace=True)
     return data
 
 
 if __name__ == '__main__':
+    DATASET_PATH = Path("D:\\work\\YuCai\\projects\\data\\5031581_31.28_121.47_2020.csv")
     # load the NREL climate dataset
     d = climate_loader(DATASET_PATH)
     print(d.head())

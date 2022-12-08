@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
 
@@ -77,8 +78,8 @@ class IdealPanel:
         self.rho_reflection = 1.0
         # structure
         self.area = 100.0
-        self.ang_Z = 30.0      # the altitude angle, 0 means parallel to the ground
-        self.ang_P = 180.0     # the azimuth angle, 0 means facing north
+        self.ang_Z = 30.0      # deg, the altitude angle, 0 means parallel to the ground
+        self.ang_P = 180.0     # deg, the azimuth angle, 0 means facing north
 
     def get_power(self, G_bh: float, G_dh: float, altitude: float, azimuth: float, temperature: float) -> float:
         G_st = self.__get_irradiance(G_bh, G_dh, altitude, azimuth)
@@ -91,12 +92,39 @@ class IdealPanel:
 
     def __get_irradiance(self, G_bh: float, G_dh: float, altitude: float, azimuth: float) -> float:
         G_gh = G_bh + G_dh
-        cos_theta = np.sin(self.ang_Z) * np.cos(altitude) * np.cos(self.ang_P - azimuth) + np.sin(altitude) * np.cos(self.ang_Z)
+        # NOTICE: degree to radian
+        ang_Z = np.deg2rad(self.ang_Z)
+        ang_P = np.deg2rad(self.ang_P)
+        altitude = np.deg2rad(altitude)
+        azimuth = np.deg2rad(azimuth)
+        cos_theta = np.sin(ang_Z) * np.cos(altitude) * np.cos(ang_P - azimuth) + np.sin(altitude) * np.cos(ang_Z)
         G_b = G_bh * cos_theta
-        G_d = G_dh * (1 + np.cos(self.ang_Z / 2)) * 2 / 3
-        G_r = G_gh * self.rho_reflection * (1 - np.cos(self.ang_Z / 2)) / 2
+        G_d = G_dh * (1 + np.cos(ang_Z / 2)) * 2 / 3
+        G_r = G_gh * self.rho_reflection * (1 - np.cos(ang_Z / 2)) / 2
         G_st = G_b + G_d + G_r
         return G_st
+
+    def simulate(self, data: pd.DataFrame, latitude: float) -> pd.DataFrame:
+        temperature = data['Temperature']
+        G_bh = data['DNI']
+        G_dh = data['DHI']
+        # calculate the Declination angle
+        n = data['Day of Year']
+        dec = 23.45 * np.sin(2 * np.pi * (284 + n) / 365)
+        # calculate the altitude angle At
+        altitude = 90 - data['Solar Zenith Angle']
+        altitude.clip(0, 90, inplace=True)
+        # calculate the azimuth angle Az
+        # NOTICE: degree to radian
+        dec = np.deg2rad(dec)
+        altitude = np.deg2rad(altitude)
+        latitude = np.deg2rad(latitude)
+        cos_Az = (np.sin(dec) - np.sin(altitude) * np.sin(latitude)) / (np.cos(altitude) * np.cos(latitude))
+        cos_Az.clip(-1, 1, inplace=True)
+        azimuth = np.rad2deg(np.arccos(cos_Az))
+        azimuth = np.where(data['Hour Angle'] < 0, azimuth, 360 - azimuth)
+        power = self.get_power(G_bh, G_dh, altitude, azimuth, temperature)
+        return power
 
 
 def decline_func(values: np.ndarray, a: float, r: float) -> np.ndarray:
@@ -162,14 +190,14 @@ if __name__ == '__main__':
     plt.grid()
     plt.show()
     # plot P-G character
-    g = np.linspace(50, 300, 251)
-    plt.plot(g, rp.get_power(g, 100, 30, 0, 15))
-    plt.title("P-G Curve of the PV Panel")
-    plt.xlabel("Direct Normal Irradiation / DHI (W/m²)")
+    g = np.linspace(0, 150, 151)
+    plt.plot(g, rp.get_power(200, g, 30, 0, 15))
+    plt.title("P-G Curve of the Solar Field")
+    plt.xlabel("Diffuse Horizontal Irradiation / DHI (W/m²)")
     plt.ylabel("Power (W)")
-    plt.text(50,
-             5500,
-             "DHI: 100 W/m²\nAltitute: 30°\nTemperature: 15℃\nSun-tracking: No",
+    plt.text(0,
+             5000,
+             "Area: 100m²\nDNI: 200 W/m²\nAltitute: 30°\nTemperature: 15℃\nSun-tracking: No",
              bbox=dict(
                  boxstyle="round",
                  ec=(0.8, 0.8, 0.8),
