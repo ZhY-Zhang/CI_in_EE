@@ -104,7 +104,7 @@ class IdealPanel:
         G_st = G_b + G_d + G_r
         return G_st
 
-    def simulate(self, data: pd.DataFrame, latitude: float) -> pd.DataFrame:
+    def simulate(self, data: pd.DataFrame, latitude: float, expand_frame: bool = False) -> pd.DataFrame:
         temperature = data['Temperature']
         G_bh = data['DNI']
         G_dh = data['DHI']
@@ -124,7 +124,11 @@ class IdealPanel:
         azimuth = np.rad2deg(np.arccos(cos_Az))
         azimuth = np.where(data['Hour Angle'] < 0, azimuth, 360 - azimuth)
         power = self.get_power(G_bh, G_dh, altitude, azimuth, temperature)
-        return power
+        power = pd.DataFrame(power, columns=['Power'])
+        if expand_frame:
+            return pd.concat([data, power], axis=1)
+        else:
+            return power
 
 
 def decline_func(values: np.ndarray, a: float, r: float) -> np.ndarray:

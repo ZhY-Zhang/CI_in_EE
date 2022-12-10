@@ -11,11 +11,13 @@ plt.rcParams['figure.figsize'] = (8.0, 12.0)
 
 DATASET_PATH = Path("D:\\work\\YuCai\\projects\\data\\5031581_31.28_121.47_2020.csv")
 LATITUDE = 31.28
+FACTORS = ['Power', 'GHI', 'Temperature']
 
 if __name__ == '__main__':
     climate_data = climate_loader(DATASET_PATH)
     panel = IdealPanel()
-    result = panel.simulate(climate_data, LATITUDE)
+    result = panel.simulate(climate_data, LATITUDE, expand_frame=True)
+    power = result['Power']
 
     fig, (ax1, ax2) = plt.subplots(2, 1)
     fig.suptitle("Solar Irradiation and Output Power Per Week in Shanghai in 2020")
@@ -28,7 +30,7 @@ if __name__ == '__main__':
     ax1.grid()
     ax1.legend()
     # plot the power
-    power_res = result.resample('W').mean()
+    power_res = power.resample('W').mean()
     l21 = ax2.plot(power_res.index, power_res.values, label="Output Power")
     ax2.set_xlabel("Date")
     ax2.set_ylabel("Average Output Power Per Week (W)")
