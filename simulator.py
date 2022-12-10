@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 from solar_model.climate import climate_loader
 from solar_model.solar_panel import IdealPanel
 
+plt.rcParams['figure.figsize'] = (8.0, 12.0)
+
 DATASET_PATH = Path("D:\\work\\YuCai\\projects\\data\\5031581_31.28_121.47_2020.csv")
 LATITUDE = 31.28
 
@@ -22,7 +24,7 @@ if __name__ == '__main__':
     l11 = ax1.plot(climate_res.index, climate_res["DHI"], label="DHI", linewidth=1)
     l12 = ax1.plot(climate_res.index, climate_res["DNI"], label="DNI", linewidth=1)
     l13 = ax1.plot(climate_res.index, climate_res["GHI"], label="GHI", linewidth=1)
-    ax1.set_ylabel("Average Solar Irradiarion Per Week (W/m²)")
+    ax1.set_ylabel("Average Solar Irradiation Per Week (W/m²)")
     ax1.grid()
     ax1.legend()
     # plot the power

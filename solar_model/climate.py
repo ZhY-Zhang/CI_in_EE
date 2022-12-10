@@ -29,7 +29,7 @@ if __name__ == '__main__':
     plt.plot(da.index, da["GHI"], label="GHI", linewidth=1)
     plt.title("Average Solar Irradiation Per Week in Shanghai in 2020")
     plt.xlabel("Date")
-    plt.ylabel("Average Solar Irradiarion Per Week (W/m²)")
+    plt.ylabel("Average Solar Irradiation Per Week (W/m²)")
     plt.legend()
     plt.grid()
     plt.show()

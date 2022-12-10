@@ -82,7 +82,7 @@ class IdealPanel:
         self.ang_P = 180.0     # deg, the azimuth angle, 0 means facing north
 
     def get_power(self, G_bh: float, G_dh: float, altitude: float, azimuth: float, temperature: float) -> float:
-        G_st = self.__get_irradiance(G_bh, G_dh, altitude, azimuth)
+        G_st = self.get_irradiance(G_bh, G_dh, altitude, azimuth)
         eta_ref = self.battery.eta
         T_c_ref = self.battery.T_ref
         T_c = temperature + ((self.battery.NOCT - 20) / 800) * G_st
@@ -90,7 +90,7 @@ class IdealPanel:
         power = eta * self.area * G_st
         return power
 
-    def __get_irradiance(self, G_bh: float, G_dh: float, altitude: float, azimuth: float) -> float:
+    def get_irradiance(self, G_bh: float, G_dh: float, altitude: float, azimuth: float) -> float:
         G_gh = G_bh + G_dh
         # NOTICE: degree to radian
         ang_Z = np.deg2rad(self.ang_Z)
