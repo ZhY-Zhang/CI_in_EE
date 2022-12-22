@@ -20,7 +20,7 @@ NODES_DE = ["A", "F", "Y", "Y1", "Y2", "Z", "Z1", "Z2"]
 
 DAG_FILE = DAG_DE_FILE
 NODES = NODES_DE
-TREATMENT = "F"
+TREATMENT = "A"
 OUTCOME = "Y"
 
 
@@ -51,6 +51,7 @@ def data_expander(df: pd.DataFrame) -> pd.DataFrame:
     df['Z'] = df['Y'].diff(2).shift(-1) / 2
     df['Z1'] = df['Z'].shift(1)
     df['Z2'] = df['Z'].shift(2)
+    df['A1_inv'] = 1 / df['A'].shift(1)
     return df
 
 
@@ -67,7 +68,12 @@ if __name__ == '__main__':
     df = signal_generator(np.array([[1, 1, 2.5], [1, 3, 2.4], [0.7, 5, 1], [2, 0.8, 4], [0.6, 2, 6]]))
     df = data_expander(df)
     df.dropna(axis=0, how='any', inplace=True)
-    print(df)
+    plt.plot(df['T'], df['Y'])
+    plt.title("Signal")
+    plt.xlabel("time (s)")
+    plt.ylabel("voltage (V)")
+    plt.grid()
+    plt.show()
 
     # C. DoWhy
     # I. Create a causal model from the data and given graph.

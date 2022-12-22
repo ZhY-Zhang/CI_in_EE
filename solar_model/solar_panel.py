@@ -1,6 +1,9 @@
+from typing import Tuple
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
 
 
 class Battery:
@@ -141,27 +144,62 @@ class RealPanel(IdealPanel):
 
     def __init__(self) -> None:
         super().__init__()
-        self.age = 0
-        self.damage = 0.0
-        self.deposit = 0.0
-        self.shading = 0.0
 
-    def update_state(self, age: int, damage: float, deposit: float, shading: float) -> None:
-        self.age = age
-        self.damage = damage
-        self.deposit = deposit
-        self.shading = shading
+    def get_gain(self, aging: float, damage: float, deposit: float, shading: float) -> float:
+        """
+        aging:      days        (days >= 0)
+        damage:     percent     (0.0 <= damage <= 1.0, ideal: 0.0)
+        deposit:    whatever    (deposit >=0)
+        shading:    percent     (0.0 <= shading <= 1.0, ideal: 0.0)
+        """
+        gain_aging = decline_func(aging / 365, 0.01, 0.1)
+        gain_damage = 1 - damage
+        gain_deposit = decline_func(deposit, 0.1, 2)
+        gain_shading = 1 - shading
+        return gain_aging * gain_damage * gain_deposit * gain_shading
 
-    def get_power(self, G_bh: float, G_dh: float, altitude: float, azimuth: float, temperature: float) -> float:
-        # real factors
-        gain_aging = decline_func(self.age / 365, 0.01, 0.1)
-        gain_damage = 1 - self.damage
-        gain_deposit = decline_func(self.deposit, 0.1, 2)
-        gain_shading = 1 - self.shading
-        # calculate power
-        power = super().get_power(G_bh, G_dh, altitude, azimuth, temperature)
-        power = power * gain_aging * gain_damage * gain_deposit * gain_shading
+    def simulate(self, data: pd.DataFrame, latitude: float, expand_frame: bool = False) -> pd.DataFrame:
+        power = super().simulate(data, latitude, expand_frame)
+        aging = data['Aging']
+        damage = data['Damage']
+        deposit = data['Deposit']
+        shading = data['Shading']
+        power['Real Power'] = power['Power'] * self.get_gain(aging, damage, deposit, shading)
         return power
+
+
+def virtual_scene(data: pd.DataFrame) -> Tuple[pd.DataFrame, np.ndarray]:
+    N = len(data)
+    P1 = 36
+    # cleaning times
+    P2 = 3
+    # deposit decline
+    P3 = 4e-5
+    # aging
+    data['Aging'] = np.arange(N) / 144 + np.random.randint(3650)
+    # damage
+    a = np.random.random(P1)
+    b = interp1d(np.arange(P1), a, kind='zero')(np.linspace(0, P1 - 1, N))
+    c = np.where(b > 0.8, (b - 0.8) * 5, 0)
+    data['Damage'] = c
+    # shading
+    a = np.random.random(N)
+    b = np.convolve(a, np.hanning(9))[0:N]
+    b = b / b.max()
+    c = np.power(b, 6) * np.random.random()
+    data['Shading'] = c
+    # deposit: +0.003 per day
+    r = np.random.random(N)
+    clean = np.random.randint(0, N, size=P2)
+    d = np.empty(N)
+    d[0] = r[0]
+    for i in range(1, N):
+        if i in clean:
+            d[i] = 0
+        else:
+            d[i] = d[i - 1] + 2 * P3 * r[i]
+    data['Deposit'] = d
+    return (data, clean)
 
 
 if __name__ == '__main__':
