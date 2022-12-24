@@ -47,14 +47,14 @@ def signal_generator(operation: np.ndarray, sample_period: float = SAMPLE_PERIOD
 def data_expander(df: pd.DataFrame) -> pd.DataFrame:
     df['Y1'] = df['Y'].shift(1)
     df['Y2'] = df['Y'].shift(2)
-    df['Z'] = df['Y'].diff(2).shift(-1) / 2
+    df['Z'] = df['Y'].diff(2).shift(-1) / (2 * SAMPLE_PERIOD)
     df['Z1'] = df['Z'].shift(1)
     df['Z2'] = df['Z'].shift(2)
     df['A1_inv'] = 1 / df['A'].shift(1)
     return df
 
 
-def plotter() -> None:
+def plotter(title: str) -> None:
     num = np.sum(OPERATION[:, 2] // SAMPLE_PERIOD, dtype=int)
     time = np.arange(num) * SAMPLE_PERIOD
     for p in FILE_PATH.glob("[1234567890.]*.txt"):
@@ -62,7 +62,7 @@ def plotter() -> None:
         plt.plot(time, a, label="ns: {}".format(p.stem))
     ideal_data = signal_generator(OPERATION, noise_scale=0.0)
     plt.plot(time, ideal_data['Y'], label="ideal data", linewidth=2, linestyle='--', zorder=0)
-    plt.title("Training Results of the Time-Lag Model (Exact Initial Values)")
+    plt.title(title)
     plt.xlabel("time (s)")
     plt.ylabel("voltage (V)")
     plt.grid()
@@ -71,7 +71,6 @@ def plotter() -> None:
 
 
 def generated_generator() -> None:
-    # Time-Lag Model
     num = np.sum(OPERATION[:, 2] // SAMPLE_PERIOD, dtype=int)
     amplitude, frequency = OPERATION[0, 0], OPERATION[0, 1]
     # generate training data
@@ -79,6 +78,9 @@ def generated_generator() -> None:
     data = data_expander(data)
     data.dropna(axis=0, how='any', inplace=True)
     # train dowhy
+    # TODO: change comment when changing modes
+    """
+    # Time-Lag Model
     causal_model = gcm.StructuralCausalModel(DAG_TL)
     gcm.auto.assign_causal_mechanisms(causal_model, data)
     gcm.fit(causal_model, data)
@@ -93,10 +95,38 @@ def generated_generator() -> None:
         y2 = y1
         y1 = y
     np.savetxt(str(FILE_PATH.joinpath("{}.txt".format(NOISE_SCALE))), result)
+    """
+    # Derivative Model
+    causal_model = gcm.StructuralCausalModel(DAG_DE)
+    gcm.auto.assign_causal_mechanisms(causal_model, data)
+    gcm.fit(causal_model, data)
+    # save the result
+    result = np.empty(num)
+    y1 = amplitude * np.sin(-2 * np.pi * frequency * SAMPLE_PERIOD)
+    y2 = amplitude * np.sin(-4 * np.pi * frequency * SAMPLE_PERIOD)
+    z1 = amplitude * 2 * np.pi * frequency * np.cos(-2 * np.pi * frequency * SAMPLE_PERIOD)
+    z2 = amplitude * 2 * np.pi * frequency * np.cos(-4 * np.pi * frequency * SAMPLE_PERIOD)
+    for i in range(num):
+        s = gcm.interventional_samples(causal_model, {
+            'Y1': lambda _: y1,
+            'Y2': lambda _: y2,
+            'Z1': lambda _: z1,
+            'Z2': lambda _: z2
+        },
+                                       num_samples_to_draw=AVERAGE_NUM)
+        y, z = np.mean(s['Y']), np.mean(s['Z'])
+        result[i] = y
+        y2 = y1
+        y1 = y
+        z2 = z1
+        z1 = z
+    np.savetxt(str(FILE_PATH.joinpath("{}.txt".format(NOISE_SCALE))), result)
 
 
 if __name__ == '__main__':
     if MERGE:
-        plotter()
+        # TODO: change title when changing modes
+        # plotter("Training Results of the Time-Lag Model (Exact Initial Values)")
+        plotter("Training Results of the Derivative Model (Exact Initial Values)")
     else:
         generated_generator()
