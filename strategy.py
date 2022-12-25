@@ -46,25 +46,25 @@ if __name__ == '__main__':
         causal_model.set_causal_mechanism(n, gcm.AdditiveNoiseModel(gcm.ml.create_linear_regressor()))
     gcm.fit(causal_model, training_data)
     # calculate the counterfactual
-    cf_power = gcm.counterfactual_samples(causal_model, {'Last Clean': lambda x: x % 30},
+    cf_power = gcm.counterfactual_samples(causal_model, {'Last Clean': lambda x: x % 60},
                                           observed_data=simulation_data)["Real Power"]
-
     cf_power.index = simulation_data.index
 
+    # plot the conclusion
     ideal_power = simulation_data['Power']
     real_power = simulation_data['Real Power']
-    power_improvement = cf_power - real_power
 
-    ideal_power_res = ideal_power.resample('D').mean()
-    real_power_res = real_power.resample('D').mean()
-    cf_power_res = cf_power.resample('D').mean()
+    ideal_power_res = ideal_power.resample('W').mean()
+    real_power_res = real_power.resample('W').mean()
+    cf_power_res = cf_power.resample('W').mean()
+    power_improvement = cf_power_res - real_power_res
 
-    # plt.plot(ideal_power_res.index, ideal_power_res.values, label="Ideal Output Power")
-    # plt.plot(real_power_p.index, real_power_p.values, label="Real Output Power")
-    # plt.plot(cf_power_p.index, cf_power_p.values, label="Counterfactual Output Power")
-    plt.plot(power_improvement.index, power_improvement.values, label="Difference")
+    plt.plot(ideal_power_res.index, ideal_power_res.values, label="Ideal Output Power")
+    plt.plot(real_power_res.index, real_power_res.values, label="Real Output Power")
+    plt.plot(cf_power_res.index, cf_power_res.values, label="Counterfactual Output Power")
+    plt.plot(power_improvement.index, power_improvement.values, label="Power Improvement")
 
-    plt.title("Solar Irradiation and Output Power Per Week in Shanghai in 2020")
+    plt.title("Output Power and Improvement Per Week")
     plt.xlabel("Date")
     plt.ylabel("Average Output Power Per Week (W)")
     plt.grid()
