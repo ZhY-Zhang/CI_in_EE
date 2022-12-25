@@ -54,9 +54,9 @@ if __name__ == '__main__':
     ideal_power = simulation_data['Power']
     real_power = simulation_data['Real Power']
 
-    ideal_power_res = ideal_power.resample('W').mean()
-    real_power_res = real_power.resample('W').mean()
-    cf_power_res = cf_power.resample('W').mean()
+    ideal_power_res = ideal_power.resample('D').mean()
+    real_power_res = real_power.resample('D').mean()
+    cf_power_res = cf_power.resample('D').mean()
     power_improvement = cf_power_res - real_power_res
 
     plt.plot(ideal_power_res.index, ideal_power_res.values, label="Ideal Output Power")
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     plt.plot(cf_power_res.index, cf_power_res.values, label="Counterfactual Output Power")
     plt.plot(power_improvement.index, power_improvement.values, label="Power Improvement")
 
-    plt.title("Output Power and Improvement Per Week")
+    plt.title("Output Power and Improvement Per Day at a Higher Cleaning Frequency")
     plt.xlabel("Date")
     plt.ylabel("Average Output Power Per Week (W)")
     plt.grid()
