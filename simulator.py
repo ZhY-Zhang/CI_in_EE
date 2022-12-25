@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pandas as pd
 import matplotlib.pyplot as plt
 
 from solar_model.climate import climate_loader
@@ -9,11 +10,12 @@ plt.rcParams['figure.figsize'] = (8.0, 12.0)
 
 DATASET_PATH = Path("D:\\work\\YuCai\\projects\\data\\5031581_31.28_121.47_2020.csv")
 LATITUDE = 31.28
-FACTORS = ['Power', 'GHI', 'Temperature']
+CLEAN_PLAN = [pd.Timestamp("2020-04-01, 10:30:00"), pd.Timestamp("2020-09-01, 13:50:00"), pd.Timestamp("2020-12-20, 09:45:00")]
+REPAIR_PLAN = [pd.Timestamp("2020-05-20, 14:20:00"), pd.Timestamp("2020-11-10, 09:20:00")]
 
 if __name__ == '__main__':
     climate_data = climate_loader(DATASET_PATH)
-    climate_data, clean = virtual_scene(climate_data)
+    climate_data = virtual_scene(climate_data, REPAIR_PLAN, CLEAN_PLAN)
     panel = RealPanel()
     result = panel.simulate(climate_data, LATITUDE, expand_frame=True)
     ideal_power = result['Power']
@@ -34,8 +36,6 @@ if __name__ == '__main__':
     real_power_res = real_power.resample('W').mean()
     l21 = ax2.plot(ideal_power_res.index, ideal_power_res.values, label="Ideal Output Power")
     l22 = ax2.plot(real_power_res.index, real_power_res.values, label="Real Output Power")
-    # annotation
-    ax2.scatter(ideal_power.index[clean], [1000 for _ in range(len(clean))], label="Cleaning", marker='^', s=100, c='black')
     # plot settings
     ax2.set_xlabel("Date")
     ax2.set_ylabel("Average Output Power Per Week (W)")

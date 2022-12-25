@@ -1,9 +1,8 @@
-from typing import Tuple
+from typing import List
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy.interpolate import interp1d
 
 
 class Battery:
@@ -168,38 +167,49 @@ class RealPanel(IdealPanel):
         return power
 
 
-def virtual_scene(data: pd.DataFrame) -> Tuple[pd.DataFrame, np.ndarray]:
+def virtual_scene(data: pd.DataFrame, repair: List[pd.Timestamp], clean: List[pd.Timestamp]) -> pd.DataFrame:
     N = len(data)
-    P1 = 36
-    # cleaning times
-    P2 = 3
     # deposit decline
     P3 = 4e-5
-    # aging
+    # aging (days)
     data['Aging'] = np.arange(N) / 144 + np.random.randint(3650)
     # damage
-    a = np.random.random(P1)
-    b = interp1d(np.arange(P1), a, kind='zero')(np.linspace(0, P1 - 1, N))
-    c = np.where(b > 0.8, (b - 0.8) * 5, 0)
-    data['Damage'] = c
+    c, d = np.zeros(N), np.zeros(N)
+    for i, t in enumerate(data.index):
+        if i == 0:
+            continue
+        if t in repair:
+            d[i] = 0
+            c[i] = 0
+        elif np.random.random() < 1e-3:
+            d[i] = np.clip(d[i - 1] + np.random.normal(0.01, 0.003), 0.0, 1.0)
+            c[i] = c[i - 1] + 1 / 144
+        else:
+            d[i] = d[i - 1]
+            c[i] = c[i - 1] + 1 / 144
+    data['Damage'] = d
+    data['Last Repair'] = c
     # shading
     a = np.random.random(N)
     b = np.convolve(a, np.hanning(9))[0:N]
     b = b / b.max()
     c = np.power(b, 6) * np.random.random()
     data['Shading'] = c
-    # deposit: +0.003 per day
+    # deposit: +0.003 per day, clean (days)
     r = np.random.random(N)
-    clean = np.random.randint(0, N, size=P2)
-    d = np.empty(N)
-    d[0] = r[0]
-    for i in range(1, N):
-        if i in clean:
+    d, c = np.zeros(N), np.zeros(N)
+    for i, t in enumerate(data.index):
+        if i == 0:
+            continue
+        if t in clean:
             d[i] = 0
+            c[i] = 0
         else:
-            d[i] = d[i - 1] + 2 * P3 * r[i]
+            d[i] = d[i - 1] + 2 * P3 * r[i] * np.random.normal(1.0, 0.33)
+            c[i] = c[i - 1] + 1 / 144
     data['Deposit'] = d
-    return (data, clean)
+    data['Last Clean'] = c
+    return data
 
 
 if __name__ == '__main__':
